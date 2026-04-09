@@ -23,7 +23,7 @@ async function startServer(port: number): Promise<void> {
     }
   });
 
-  httpServer.listen(port, () => {
+  httpServer.listen(port, '0.0.0.0', () => {
     console.log(`Server running on port ${port} in ${config.NODE_ENV} mode`);
   });
 
