@@ -45,7 +45,7 @@ export function createApp() {
 
   if (hasFrontend) {
     app.use(express.static(frontendPath));
-    app.get('(.*)', (req, res, next) => {
+    app.get('*any', (req, res, next) => {
       // Don't serve index.html for API routes that aren't found
       if (req.url.startsWith('/api/') || req.url.startsWith('/uploads/')) {
         return next();
