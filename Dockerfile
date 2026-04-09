@@ -49,5 +49,5 @@ ENV PORT=4000
 EXPOSE 4000
 
 # Run migrations and start the server
-# Using -w backend ensures it runs in the correct workspace context
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=./backend/prisma/schema.prisma && node backend/dist/index.js"]
+# CD into backend ensures relative paths in app.ts work correctly
+CMD ["sh", "-c", "cd backend && ../node_modules/.bin/prisma migrate deploy && node dist/index.js"]
