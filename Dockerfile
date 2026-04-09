@@ -30,8 +30,9 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy root package files to enable workspace support
+# Copy root package files and ALL node_modules (including hoisted ones)
 COPY package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built backend
 COPY --from=builder /app/backend/dist ./backend/dist
@@ -47,5 +48,6 @@ ENV PORT=4000
 
 EXPOSE 4000
 
-# Run migrations and start the server using workspace command
-CMD ["sh", "-c", "cd backend && npx prisma migrate deploy && node dist/index.js"]
+# Run migrations and start the server
+# Using -w backend ensures it runs in the correct workspace context
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=./backend/prisma/schema.prisma && node backend/dist/index.js"]
