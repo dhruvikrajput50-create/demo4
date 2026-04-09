@@ -1,46 +1,46 @@
 # --------- Build Stage ---------
 FROM node:20-alpine AS builder
 
-# Install openssl for Prisma
+# Install build dependencies
 RUN apk add --no-cache openssl libc6-compat
 
 WORKDIR /app
 
-# Copy package files
+# Copy root package files
 COPY package*.json ./
 COPY backend/package*.json ./backend/
 COPY frontend/package*.json ./frontend/
 
-# Install root dependencies
+# Install ALL dependencies (including dev)
 RUN npm install
 
-# Build Frontend
-COPY frontend ./frontend/
+# Copy source and build everything
+COPY . .
 RUN cd frontend && npm run build
-
-# Build Backend
-COPY backend ./backend/
 RUN cd backend && npx prisma generate && npm run build
 
 # --------- Production Stage ---------
 FROM node:20-alpine AS production
 
-# Install openssl for Prisma
 RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy root package files and ALL node_modules (including hoisted ones)
+# Copy root package files
 COPY package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY backend/package*.json ./backend/
 
-# Copy built backend
+# Install ONLY production dependencies
+# This keeps the image small and avoids hoisting issues
+RUN npm install --omit=dev
+
+# Copy generated Prisma client from builder
+COPY --from=builder /app/backend/node_modules/.prisma ./backend/node_modules/.prisma
+COPY --from=builder /app/backend/node_modules/@prisma ./backend/node_modules/@prisma
+
+# Copy built assets
 COPY --from=builder /app/backend/dist ./backend/dist
-COPY --from=builder /app/backend/node_modules ./backend/node_modules
-COPY --from=builder /app/backend/package*.json ./backend/
 COPY --from=builder /app/backend/prisma ./backend/prisma
-
-# Copy built frontend (so backend can serve it)
 COPY --from=builder /app/frontend/dist ./frontend/dist
 
 ENV NODE_ENV=production
@@ -48,5 +48,5 @@ ENV PORT=4000
 
 EXPOSE 4000
 
-# Run migrations and start the server
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=./backend/prisma/schema.prisma && node backend/dist/index.js"]
+# Final entrypoint script
+CMD ["sh", "-c", "cd backend && npx prisma migrate deploy && node dist/index.js"]
